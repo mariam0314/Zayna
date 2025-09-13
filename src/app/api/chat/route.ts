@@ -97,7 +97,7 @@ Please provide a helpful, accurate response as Zayna Hotel's AI Assistant. Keep 
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    const aiReply = result.text || result.response?.text?.() || "";
+    const aiReply = result.text || "";
     
     if (!aiReply) {
       return NextResponse.json({
