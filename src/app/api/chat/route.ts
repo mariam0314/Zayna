@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Reference: blueprint:javascript_gemini integration
 // the newest Gemini model series is "gemini-2.5-flash" or gemini-2.5-pro"
@@ -10,7 +10,7 @@ if (!process.env.GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not configured");
 }
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const HOTEL_CONTEXT = `
 You are Zayna Hotel's AI Assistant. You're a luxury hotel concierge with deep knowledge about Zayna Hotel services, amenities, and the local area. Always maintain a professional, warm, and helpful tone.
@@ -92,12 +92,10 @@ Guest Question: ${message}
 
 Please provide a helpful, accurate response as Zayna Hotel's AI Assistant. Keep responses conversational but professional, and always be ready to help with hotel services, local tourism, spa bookings, dining orders, or any hotel-related questions.`;
 
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
-
-    const aiReply = result.text || "";
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const aiReply = response.text();
     
     if (!aiReply) {
       return NextResponse.json({

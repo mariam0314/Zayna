@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { message, response } = await req.json();
+    const { message, reply } = await req.json();
 
     const client = await clientPromise;
     const db = client.db();
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     const chatEntry = {
       message,
-      response,
+      reply,
       timestamp: new Date(),
     };
 
