@@ -94,7 +94,7 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 z-[9999]">
       {isOpen ? (
         <div className="w-96 h-[500px] card-black shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
@@ -214,9 +214,13 @@ export default function ChatBot() {
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-gold-gradient hover:bg-gold-light text-black p-4 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gold focus:ring-opacity-50 animate-pulse"
+          className="bg-gold text-black p-5 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gold focus:ring-opacity-50 animate-bounce border-4 border-gold-light"
+          style={{
+            background: "linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)",
+            boxShadow: "0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4)"
+          }}
         >
-          <MessageCircle size={24} />
+          <MessageCircle size={28} />
         </button>
       )}
     </div>
