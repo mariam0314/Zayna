@@ -1,250 +1,221 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { X, User, Lock, Mail, Phone } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
 export default function LoginModal({ onClose }: LoginModalProps) {
-  const [isRegister, setIsRegister] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const router = useRouter();
 
-  // login state
-  const [guestId, setGuestId] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ✅ show/hide password
-
-  // register state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-
-  // In-memory storage for credentials
-  const [savedCredentials, setSavedCredentials] = useState<{
-    guestId: string;
-    password: string;
-  } | null>(null);
-
-  // Load saved credentials when modal opens
-  useEffect(() => {
-    if (savedCredentials) {
-      setGuestId(savedCredentials.guestId);
-      setPassword(savedCredentials.password);
-    }
-  }, [savedCredentials]);
-
-  // generate guest ID
-  const generateGuestId = () => {
-    const prefix = "GUEST";
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}${randomNum}`;
-  };
-
-  // generate random password
-  const generatePassword = (length = 8) => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
-    let pass = "";
-    for (let i = 0; i < length; i++) {
-      pass += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pass;
-  };
-
-  // Save credentials to in-memory storage
-  const saveCredentials = (id: string, pass: string) => {
-    setSavedCredentials({ guestId: id, password: pass });
-  };
-
-  // Login handler
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch("/api/guest/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId, password }),
-      });
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned non-JSON response.");
-      }
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert("✅ Login successful!");
-        saveCredentials(guestId, password);
-        onClose();
-      } else {
-        alert(`❌ ${data.error}`);
-      }
-    } catch (err) {
-      console.error("Login API error:", err);
-      if (err instanceof Error) {
-        alert(`❌ Login failed: ${err.message}`);
-      } else {
-        alert("❌ Login failed due to server error.");
-      }
-    }
-  };
-
-  // Register handler
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const newGuestId = generateGuestId();
-    const newPassword = generatePassword();
+    setLoading(true);
+    setError("");
 
     try {
-      const res = await fetch("/api/guest/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          guestId: newGuestId,
-          password: newPassword,
-        }),
-      });
+      if (isLogin) {
+        // Login
+        const result = await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
 
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned non-JSON response.");
-      }
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert(
-          `🎉 Registration Successful!\n\nYour Guest ID: ${newGuestId}\nPassword: ${newPassword}`
-        );
-        saveCredentials(newGuestId, newPassword);
-        setName("");
-        setEmail("");
-        setPhone("");
-        setIsRegister(false);
-        setGuestId(newGuestId);
-        setPassword(newPassword);
+        if (result?.error) {
+          setError("Invalid email or password");
+        } else {
+          router.push("/guest/dashboard");
+          onClose();
+        }
       } else {
-        alert(`❌ Registration Failed: ${data.error}`);
+        // Register
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Auto-login after registration
+          const result = await signIn("credentials", {
+            email: formData.email,
+            password: formData.password,
+            redirect: false,
+          });
+
+          if (result?.ok) {
+            router.push("/guest/dashboard");
+            onClose();
+          }
+        } else {
+          setError(data.error || "Registration failed");
+        }
       }
-    } catch (err) {
-      console.error("Register API error:", err);
-      if (err instanceof Error) {
-        alert(`❌ Registration failed: ${err.message}`);
-      } else {
-        alert("❌ Registration failed due to server error.");
-      }
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-2xl shadow-2xl w-96 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 text-gray-600 hover:text-black"
-        >
-          ✖
-        </button>
-
-        <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
-          {isRegister ? "Guest Registration" : "Guest Login"}
-        </h2>
-
-        {/* Login Form */}
-        {!isRegister ? (
-          <form className="space-y-4" onSubmit={handleLogin}>
-            <input
-              type="text"
-              placeholder="Guest ID"
-              value={guestId}
-              onChange={(e) => setGuestId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </button>
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
-            >
-              Login
-            </button>
-          </form>
-        ) : (
-          // Registration Form
-          <form className="space-y-4" onSubmit={handleRegister}>
-            <input
-              type="text"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <input
-              type="tel"
-              placeholder="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
-            >
-              Register
-            </button>
-          </form>
-        )}
-
-        {/* Toggle Button */}
-        <div className="mt-4 text-center">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="card-black rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+      >
+        {/* Header */}
+        <div className="bg-gold-gradient p-6 text-black relative">
           <button
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-sm text-blue-600 hover:underline"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 hover:bg-black hover:bg-opacity-20 rounded-full transition"
           >
-            {isRegister
-              ? "Already have an account? Login"
-              : "Don't have an account? Register"}
+            <X size={20} />
           </button>
+          <h2 className="text-2xl font-bold mb-2">
+            {isLogin ? "Welcome Back" : "Join Zayna Hotel"}
+          </h2>
+          <p className="text-black text-opacity-90">
+            {isLogin ? "Sign in to your account" : "Create your guest account"}
+          </p>
         </div>
 
-        {/* Show saved credentials info */}
-        {savedCredentials && (
-          <div className="mt-4 p-3 bg-gray-100 rounded-md text-sm">
-            <p className="text-gray-700">Saved credentials available for this session</p>
-            <p className="text-xs text-gray-500">Guest ID: {savedCredentials.guestId}</p>
+        {/* Form */}
+        <div className="p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="input-gold w-full pl-10"
+                    placeholder="Your full name"
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gold" size={18} />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="input-gold w-full pl-10"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="input-gold w-full pl-10"
+                    placeholder="+971 xx xxx xxxx"
+                    required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gold" size={18} />
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="input-gold w-full pl-10"
+                  placeholder="Your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-gold w-full font-semibold py-3 rounded-xl disabled:opacity-50"
+            >
+              {loading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-foreground/60">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                }}
+                className="ml-2 text-gold hover:text-gold-light font-semibold"
+              >
+                {isLogin ? "Sign Up" : "Sign In"}
+              </button>
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
