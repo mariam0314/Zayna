@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#f3f3f3] px-6 md:px-10`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] text-[var(--foreground)] px-6 md:px-10`}
       >
         <Header />
         {children}

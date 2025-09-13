@@ -10,7 +10,7 @@ export default function Header() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-transparent">
+    <header className="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-gold/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16 text-white">
         {/* ✅ Logo + Text */}
         <div className="flex items-center space-x-2">
@@ -26,18 +26,27 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex space-x-8 items-center">
-          <Link href="/" className="hover:text-yellow-400 transition">
+          <Link href="/" className="hover:text-gold transition">
             Home
           </Link>
-          <Link href="/about" className="hover:text-yellow-400 transition">
+          <Link href="/about" className="hover:text-gold transition">
             About
           </Link>
-          <Link href="/contact" className="hover:text-yellow-400 transition">
+          <Link href="/contact" className="hover:text-gold transition">
             Contact
+          </Link>
+          <Link href="/tourism" className="hover:text-gold transition">
+            Tourism
+          </Link>
+          <Link href="/spa" className="hover:text-gold transition">
+            Spa
+          </Link>
+          <Link href="/dining" className="hover:text-gold transition">
+            Dining
           </Link>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="ml-4 px-5 py-2 font-semibold rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition"
+            className="ml-4 px-5 py-2 font-semibold rounded-full btn-gold"
           >
             Guest Panel
           </button>
@@ -57,40 +66,61 @@ export default function Header() {
           initial={{ height: 0 }}
           animate={{ height: "auto" }}
           transition={{ duration: 0.3 }}
-          className="md:hidden px-4 pb-4 bg-black bg-opacity-80 text-white"
+          className="md:hidden px-4 pb-4 bg-black bg-opacity-95 backdrop-blur-md text-white border-b border-gold/20"
         >
-          <div className="flex items-center space-x-2 py-3 border-b border-gray-700">
+          <div className="flex items-center space-x-2 py-3 border-b border-gold/30">
             <img src="/logo/ZaynaLogo.png" alt="Logo" className="h-8 w-auto" />
-            <span className="text-lg font-bold">Zayna</span>
+            <span className="text-lg font-bold text-gold">Zayna</span>
           </div>
 
           <Link
             href="/"
-            className="block py-2 hover:text-yellow-400"
+            className="block py-2 hover:text-gold"
             onClick={() => setIsOpen(false)}
           >
             Home
           </Link>
           <Link
             href="/about"
-            className="block py-2 hover:text-yellow-400"
+            className="block py-2 hover:text-gold"
             onClick={() => setIsOpen(false)}
           >
             About
           </Link>
           <Link
             href="/contact"
-            className="block py-2 hover:text-yellow-400"
+            className="block py-2 hover:text-gold"
             onClick={() => setIsOpen(false)}
           >
             Contact
+          </Link>
+          <Link
+            href="/tourism"
+            className="block py-2 hover:text-gold"
+            onClick={() => setIsOpen(false)}
+          >
+            Tourism
+          </Link>
+          <Link
+            href="/spa"
+            className="block py-2 hover:text-gold"
+            onClick={() => setIsOpen(false)}
+          >
+            Spa
+          </Link>
+          <Link
+            href="/dining"
+            className="block py-2 hover:text-gold"
+            onClick={() => setIsOpen(false)}
+          >
+            Dining
           </Link>
           <button
             onClick={() => {
               setIsModalOpen(true);
               setIsOpen(false);
             }}
-            className="w-full mt-3 px-5 py-2 font-semibold rounded-full bg-yellow-500 text-black hover:bg-yellow-400 transition text-center block"
+            className="w-full mt-3 px-5 py-2 font-semibold rounded-full btn-gold text-center block"
           >
             Guest Panel
           </button>
