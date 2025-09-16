@@ -1,17 +1,25 @@
 // Footer.jsx
 "use client";
 import { Instagram, Facebook } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function Footer() {
+  const { data: session } = useSession();
   return (
-    <footer className="w-full bg-gradient-to-r from-black via-black to-yellow-600 text-white shadow-lg">
+    <footer className="w-full bg-black-gold-gradient text-white shadow-lg border-t border-gold/20">
       <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
         {/* Links */}
         <div className="flex gap-6">
-          <a href="/" className="hover:text-yellow-400 transition-colors">Home</a>
-          <a href="/about" className="hover:text-yellow-400 transition-colors">About</a>
-          <a href="/rooms" className="hover:text-yellow-400 transition-colors">Rooms</a>
-          <a href="/contact" className="hover:text-yellow-400 transition-colors">Contact</a>
+          <a href="/" className="hover:text-gold transition-colors">Home</a>
+          <a href="/about" className="hover:text-gold transition-colors">About</a>
+          {session && (
+            <>
+              <a href="/tourism" className="hover:text-gold transition-colors">Tourism</a>
+              <a href="/spa" className="hover:text-gold transition-colors">Spa</a>
+              <a href="/dining" className="hover:text-gold transition-colors">Dining</a>
+            </>
+          )}
+          <a href="/contact" className="hover:text-gold transition-colors">Contact</a>
         </div>
 
         {/* Social Media */}
@@ -19,14 +27,14 @@ export default function Footer() {
           <a
             href="https://instagram.com"
             target="_blank"
-            className="hover:text-yellow-400 transition-colors"
+            className="hover:text-gold transition-colors"
           >
             <Instagram />
           </a>
           <a
             href="https://facebook.com"
             target="_blank"
-            className="hover:text-yellow-400 transition-colors"
+            className="hover:text-gold transition-colors"
           >
             <Facebook />
           </a>
@@ -34,7 +42,7 @@ export default function Footer() {
       </div>
 
       {/* Copyright */}
-      <div className="bg-black border-t border-yellow-600 text-center py-2 text-sm text-white">
+      <div className="bg-black border-t border-gold text-center py-2 text-sm text-white">
         © Zayna 2025
       </div>
     </footer>

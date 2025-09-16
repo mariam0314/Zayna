@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "../components/layout/header";
 import Footer from "@/components/layout/footer";
 import ChatBot from "@/components/chatbot";
+import AppSessionProvider from "@/components/providers/session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,12 +30,14 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#f3f3f3] px-6 md:px-10`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] text-[var(--foreground)] px-6 md:px-10`}
       >
-        <Header />
-        {children}
-        <Footer />
-        <ChatBot />
+        <AppSessionProvider>
+          <Header />
+          {children}
+          <Footer />
+          <ChatBot />
+        </AppSessionProvider>
       </body>
     </html>
   );

@@ -1,250 +1,456 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
+import { X, User, KeyRound, Mail, Phone, Home } from "lucide-react";
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
+interface RegistrationData {
+  name: string;
+  phone: string;
+  email: string;
+  roomNo: string;
+  password: string;
+}
+
 export default function LoginModal({ onClose }: LoginModalProps) {
-  const [isRegister, setIsRegister] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
 
-  // login state
-  const [guestId, setGuestId] = useState("");
+  // Login state
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ✅ show/hide password
 
-  // register state
+  // Registration state
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [roomNo, setRoomNo] = useState("");
+  const [regPassword, setRegPassword] = useState("");
 
-  // In-memory storage for credentials
-  const [savedCredentials, setSavedCredentials] = useState<{
-    guestId: string;
-    password: string;
-  } | null>(null);
+  // OTP state
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [notice, setNotice] = useState<null | { type: "success" | "error"; text: string }>(null);
 
-  // Load saved credentials when modal opens
-  useEffect(() => {
-    if (savedCredentials) {
-      setGuestId(savedCredentials.guestId);
-      setPassword(savedCredentials.password);
-    }
-  }, [savedCredentials]);
-
-  // generate guest ID
-  const generateGuestId = () => {
-    const prefix = "GUEST";
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}${randomNum}`;
-  };
-
-  // generate random password
-  const generatePassword = (length = 8) => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
-    let pass = "";
-    for (let i = 0; i < length; i++) {
-      pass += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pass;
-  };
-
-  // Save credentials to in-memory storage
-  const saveCredentials = (id: string, pass: string) => {
-    setSavedCredentials({ guestId: id, password: pass });
-  };
-
-  // Login handler
+  // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
     try {
       const res = await fetch("/api/guest/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId, password }),
+        body: JSON.stringify({ userId, password }),
       });
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned non-JSON response.");
-      }
 
       const data = await res.json();
 
-      if (data.success) {
-        alert("✅ Login successful!");
-        saveCredentials(guestId, password);
-        onClose();
+      if (res.ok) {
+        window.location.href = "/guest/dashboard";
       } else {
-        alert(`❌ ${data.error}`);
+        setError(data.error || "Login failed");
       }
-    } catch (err) {
-      console.error("Login API error:", err);
-      if (err instanceof Error) {
-        alert(`❌ Login failed: ${err.message}`);
-      } else {
-        alert("❌ Login failed due to server error.");
-      }
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Register handler
+  // Handle Registration
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    const newGuestId = generateGuestId();
-    const newPassword = generatePassword();
+    const userData: RegistrationData = {
+      name,
+      phone,
+      email,
+      roomNo,
+      password: regPassword,
+    };
 
     try {
-      const res = await fetch("/api/guest/register", {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setRegistrationData(userData);
+        await sendOtp(email);
+      } else {
+        setError(data.error || "Registration failed");
+      }
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Send OTP
+  const sendOtp = async (emailAddress: string) => {
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailAddress, name }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setOtpSent(true);
+        setCooldown(60);
+        setNotice({ type: "success", text: data.message || "OTP sent. Please check your email." });
+        // start countdown
+        const interval = setInterval(() => {
+          setCooldown((c) => {
+            if (c <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return c - 1;
+          });
+        }, 1000);
+      } else {
+        setError(data.error || "Failed to send OTP");
+        setNotice({ type: "error", text: data.error || "Failed to send OTP" });
+      }
+    } catch {
+      setError("Failed to send OTP");
+      setNotice({ type: "error", text: "Failed to send OTP" });
+    }
+  };
+
+  // Verify OTP
+  const verifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (!registrationData) {
+      setError("Registration data is missing.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          email,
-          phone,
-          guestId: newGuestId,
-          password: newPassword,
+          email: registrationData.email,
+          otp,
+          userData: registrationData,
         }),
       });
 
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned non-JSON response.");
-      }
-
       const data = await res.json();
 
-      if (data.success) {
-        alert(
-          `🎉 Registration Successful!\n\nYour Guest ID: ${newGuestId}\nPassword: ${newPassword}`
-        );
-        saveCredentials(newGuestId, newPassword);
-        setName("");
-        setEmail("");
-        setPhone("");
-        setIsRegister(false);
-        setGuestId(newGuestId);
-        setPassword(newPassword);
+      if (res.ok) {
+        // After successful verification, provide guest ID and prefill login
+        const newGuestId = data?.data?.guestId;
+        if (newGuestId) {
+          setNotice({ type: "success", text: `Account created! Your Guest ID is ${newGuestId}. We prefilled your login below.` });
+          // Switch to login form with prefilled credentials
+          setIsSignUp(false);
+          setOtpSent(false);
+          setUserId(newGuestId);
+          setPassword(regPassword);
+          // Optionally auto-sign-in after short delay
+          setTimeout(() => {
+            const evt = new Event("submit", { bubbles: true, cancelable: true });
+            // Call handleLogin directly to avoid DOM coupling
+            handleLogin({ preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.FormEvent);
+          }, 1200);
+        } else {
+          setNotice({ type: "success", text: "Account verified! Please sign in using your Guest ID and password." });
+          setIsSignUp(false);
+          setOtpSent(false);
+        }
       } else {
-        alert(`❌ Registration Failed: ${data.error}`);
+        setError(data.error || "Invalid OTP");
       }
-    } catch (err) {
-      console.error("Register API error:", err);
-      if (err instanceof Error) {
-        alert(`❌ Registration failed: ${err.message}`);
-      } else {
-        alert("❌ Registration failed due to server error.");
-      }
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-2xl shadow-2xl w-96 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 text-gray-600 hover:text-black"
-        >
-          ✖
-        </button>
+  // Close on ESC key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
-        <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
-          {isRegister ? "Guest Registration" : "Guest Login"}
-        </h2>
+  // Ensure portal target is available (avoids SSR mismatch)
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-        {/* Login Form */}
-        {!isRegister ? (
-          <form className="space-y-4" onSubmit={handleLogin}>
-            <input
-              type="text"
-              placeholder="Guest ID"
-              value={guestId}
-              onChange={(e) => setGuestId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </button>
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
-            >
-              Login
-            </button>
-          </form>
-        ) : (
-          // Registration Form
-          <form className="space-y-4" onSubmit={handleRegister}>
-            <input
-              type="text"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <input
-              type="tel"
-              placeholder="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
-            >
-              Register
-            </button>
-          </form>
-        )}
+  if (!mounted) return null;
 
-        {/* Toggle Button */}
-        <div className="mt-4 text-center">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm grid place-items-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="card-black rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gold-gradient p-6 text-black relative">
           <button
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-sm text-blue-600 hover:underline"
+            onClick={onClose}
+            aria-label="Close login"
+            title="Close"
+            className="absolute top-4 right-4 p-2 rounded-full transition shadow-md bg-white/90 hover:bg-white text-black border border-black/10"
           >
-            {isRegister
-              ? "Already have an account? Login"
-              : "Don't have an account? Register"}
+            <X size={22} />
           </button>
+          <h2 className="text-2xl font-bold mb-2">
+            {otpSent ? "Verify OTP" : isSignUp ? "Create Account" : "Guest Login"}
+          </h2>
+          <p className="text-black text-opacity-90">
+            {otpSent
+              ? `Enter the OTP sent to ${registrationData?.email}`
+              : isSignUp
+              ? "Fill in your details to register"
+              : "Enter your credentials to access guest services"}
+          </p>
         </div>
 
-        {/* Show saved credentials info */}
-        {savedCredentials && (
-          <div className="mt-4 p-3 bg-gray-100 rounded-md text-sm">
-            <p className="text-gray-700">Saved credentials available for this session</p>
-            <p className="text-xs text-gray-500">Guest ID: {savedCredentials.guestId}</p>
-          </div>
-        )}
-      </div>
-    </div>
+        <div className="p-6">
+          {notice && (
+            <div className={`mb-4 p-3 rounded-lg text-sm border ${notice.type === "success" ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+              <div className="flex justify-between items-start gap-3">
+                <span>{notice.text}</span>
+                <button onClick={() => setNotice(null)} className="text-foreground/60 hover:text-gold">×</button>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* OTP Verification Form */}
+          {otpSent && (
+            <form onSubmit={verifyOtp} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Enter OTP</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="6-digit OTP"
+                    maxLength={6}
+                    required
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={cooldown > 0 || loading}
+                    onClick={() => {
+                      const targetEmail = registrationData?.email || email;
+                      if (targetEmail) sendOtp(targetEmail);
+                    }}
+                    className={`btn-outline-gold w-full font-semibold py-2 rounded-xl ${cooldown > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-gold w-full font-semibold py-2 rounded-xl"
+                  >
+                    {loading ? "Verifying..." : "Verify & Login"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* Registration Form */}
+          {!otpSent && isSignUp && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="05XXXXXXXX"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Room Number</label>
+                <div className="relative">
+                  <Home className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="text"
+                    value={roomNo}
+                    onChange={(e) => setRoomNo(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="101"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Password</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="password"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="Min 6 characters"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 btn-gold w-full font-semibold py-2 rounded-xl"
+              >
+                {loading ? "Creating account..." : "Sign up & Send OTP"}
+              </button>
+
+              <p className="text-xs text-foreground/60 text-center">
+                Already have an account?{" "}
+                <button type="button" className="text-gold" onClick={() => setIsSignUp(false)}>Sign in</button>
+              </p>
+              <div className="flex justify-center">
+                <button type="button" onClick={onClose} className="text-foreground/70 hover:text-gold text-sm mt-1">Close</button>
+              </div>
+            </form>
+          )}
+
+          {/* Login Form */}
+          {!otpSent && !isSignUp && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Guest ID or Email</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="e.g. GUEST101_1234 or you@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Password</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={18} />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20"
+                    placeholder="Your password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 btn-gold w-full font-semibold py-2 rounded-xl"
+              >
+                {loading ? "Signing in..." : "Sign in"}
+              </button>
+
+              <p className="text-xs text-foreground/60 text-center">
+                New to Zayna?{" "}
+                <button type="button" className="text-gold" onClick={() => setIsSignUp(true)}>Create an account</button>
+              </p>
+              <div className="flex justify-center">
+                <button type="button" onClick={onClose} className="text-foreground/70 hover:text-gold text-sm mt-1">Close</button>
+              </div>
+            </form>
+          )}
+        </div>
+      </motion.div>
+    </div>,
+    document.body
   );
 }
