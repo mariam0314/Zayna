@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
+import type { ObjectId } from "mongodb";
 import { z } from "zod";
 
 const bookingSchema = z.object({
@@ -31,7 +32,12 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const db = client.db();
     const bookings = db.collection("spa_bookings");
-    const users = db.collection("users");
+    type UserDoc = {
+      _id: ObjectId;
+      email: string;
+      bookings?: ObjectId[];
+    };
+    const users = db.collection<UserDoc>("users");
 
     const booking = {
       ...bookingData,
@@ -45,8 +51,8 @@ export async function POST(req: Request) {
 
     // Update user's bookings array
     await users.updateOne(
-      { email: session.user.email },
-      { $push: { bookings: result.insertedId } }
+      { email: session.user.email as string },
+      { $push: { bookings: result.insertedId as unknown as ObjectId } }
     );
 
     return NextResponse.json({

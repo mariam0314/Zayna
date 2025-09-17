@@ -3,9 +3,12 @@ import Stripe from "stripe";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+// Initialize Stripe with proper error handling
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      // apiVersion: '2025-08-27.basil', // Commented to avoid type pinning errors in CI
+    })
+  : null;
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +17,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    if (!stripe) {
+      return NextResponse.json(
+        { error: "Payment service not configured" },
+        { status: 503 }
       );
     }
 
