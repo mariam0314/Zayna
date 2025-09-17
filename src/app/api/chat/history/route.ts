@@ -16,10 +16,9 @@ export async function GET() {
 
     const history = await chatHistory
       .findOne({ userId: session.user.id })
-      ?.then(doc => doc?.messages || []);
+      ?.then((doc) => doc?.messages || []);
 
     return NextResponse.json({ messages: history || [] });
-
   } catch (error) {
     console.error("Chat history error:", error);
     return NextResponse.json({ messages: [] });
@@ -51,7 +50,7 @@ export async function POST(req: Request) {
     // Get current messages to check length
     const currentDoc = await chatHistory.findOne({ userId: session.user.id });
     const currentMessages = currentDoc?.messages || [];
-    
+
     // If we have 50+ messages, remove the oldest
     if (currentMessages.length >= 50) {
       await chatHistory.updateOne(
@@ -60,18 +59,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Add new message
+    // Add new message (quick TypeScript fix: cast $push as any)
     await chatHistory.updateOne(
       { userId: session.user.id },
       {
-        $push: { messages: chatEntry },
-        $set: { updatedAt: new Date() }
+        $push: { messages: chatEntry } as any,
+        $set: { updatedAt: new Date() },
       },
       { upsert: true }
     );
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error("Chat history save error:", error);
     return NextResponse.json(
