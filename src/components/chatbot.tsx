@@ -106,9 +106,9 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999]">
+    <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[9999]">
       {isOpen ? (
-        <div className="w-96 h-[500px] card-black shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <div className="w-[90vw] h-[70vh] sm:w-96 sm:h-[500px] card-black shadow-2xl rounded-2xl sm:rounded-3xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 bg-gold-gradient text-black relative overflow-hidden">
             <div className="absolute inset-0 bg-black bg-opacity-10"></div>
@@ -125,14 +125,14 @@ export default function ChatBot() {
               onClick={() => setIsOpen(false)}
               aria-label="Close chat"
               title="Close"
-              className="hover:bg-black hover:bg-opacity-20 p-2 rounded-full transition-all duration-200 relative z-10"
+              className="p-2.5 sm:p-2 rounded-full transition-all duration-200 relative z-10 bg-black/10 hover:bg-black/20 focus:outline-none focus:ring-2 focus:ring-black/30"
             >
-              <X size={20} className="text-black" />
+              <X size={22} className="text-black sm:size-[20px]" />
             </button>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-[var(--surface)] to-[var(--background)]">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gradient-to-b from-[var(--surface)] to-[var(--background)]">
             {messages.length === 0 && (
               <div className="text-center py-8">
                 <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--background)] border border-gold/30 p-6 rounded-2xl mb-4">
@@ -166,7 +166,7 @@ export default function ChatBot() {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in-0 slide-in-from-bottom-2 duration-300`}
               >
                 <div
-                  className={`max-w-[280px] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  className={`max-w-[80%] sm:max-w-[280px] px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-sm leading-relaxed ${
                     msg.role === "user"
                       ? "bg-gold-gradient text-black shadow-lg"
                       : "bg-surface text-foreground shadow-md border border-border"
@@ -201,8 +201,8 @@ export default function ChatBot() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-surface border-t border-border">
-            <div className="flex space-x-3">
+          <div className="p-3 sm:p-4 bg-surface border-t border-border">
+            <div className="flex space-x-2 sm:space-x-3">
               <input
                 type="text"
                 value={input}
@@ -215,26 +215,35 @@ export default function ChatBot() {
               <button
                 onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
-                className="btn-gold disabled:opacity-50 disabled:cursor-not-allowed p-3 rounded-2xl transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 shadow-lg"
+                className="btn-gold disabled:opacity-50 disabled:cursor-not-allowed p-2.5 sm:p-3 rounded-2xl transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 shadow-lg"
               >
                 <Send size={16} />
               </button>
             </div>
-            <p className="text-xs text-foreground/60 mt-2 text-center">
+            <div className="flex items-center justify-between mt-2">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-[11px] sm:text-xs text-foreground/70 hover:text-foreground underline underline-offset-2"
+                aria-label="Close chat"
+              >
+                Close
+              </button>
+              <p className="text-[10px] sm:text-xs text-foreground/60 text-center flex-1">
               For immediate assistance, call <span className="text-gold font-semibold">(555) 123-4567</span>
-            </p>
+              </p>
+            </div>
           </div>
         </div>
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-gold text-black p-5 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gold focus:ring-opacity-50 animate-bounce border-4 border-gold-light"
+          className="bg-gold text-black p-4 sm:p-5 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gold focus:ring-opacity-50 animate-bounce border-4 border-gold-light"
           style={{
             background: "linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)",
             boxShadow: "0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4)"
           }}
         >
-          <MessageCircle size={28} />
+          <MessageCircle size={24} className="sm:size-[28px]" />
         </button>
       )}
     </div>
