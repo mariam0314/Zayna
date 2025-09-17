@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import clientPromise from "@/lib/mongodb";
 
+export const runtime = "nodejs";
+
 // MongoDB collection name for OTPs
 const OTP_COLLECTION = "otp_codes";
 
@@ -36,43 +38,65 @@ export async function POST(req) {
     // Rate limit: cooldown (60s) between sends for same email
     const cooldownMs = 60 * 1000;
     const expiresInMs = 10 * 60 * 1000;
-    const otpCol = await getOtpCollection();
-    const existing = await otpCol.findOne({ email }, { projection: { createdAt: 1, expiresAt: 1 } });
-    if (existing && existing.createdAt && Date.now() - new Date(existing.createdAt).getTime() < cooldownMs) {
-      const waitSec = Math.ceil((cooldownMs - (Date.now() - new Date(existing.createdAt).getTime())) / 1000);
-      return NextResponse.json(
-        { success: false, error: `Please wait ${waitSec}s before requesting another OTP.` },
-        { status: 429 }
-      );
+    let canUseDb = true;
+    let otpCol = null;
+    try {
+      otpCol = await getOtpCollection();
+    } catch (e) {
+      canUseDb = false;
+      console.warn("send-otp: DB unavailable, proceeding without persistence", e);
+    }
+    if (canUseDb && otpCol) {
+      const existing = await otpCol.findOne({ email }, { projection: { createdAt: 1, expiresAt: 1 } });
+      if (existing && existing.createdAt && Date.now() - new Date(existing.createdAt).getTime() < cooldownMs) {
+        const waitSec = Math.ceil((cooldownMs - (Date.now() - new Date(existing.createdAt).getTime())) / 1000);
+        return NextResponse.json(
+          { success: false, error: `Please wait ${waitSec}s before requesting another OTP.` },
+          { status: 429 }
+        );
+      }
     }
 
     // Generate and upsert OTP
     const otp = generateOTP();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + expiresInMs);
-    await otpCol.updateOne(
-      { email },
-      { $set: { email, otp, createdAt: now, expiresAt } },
-      { upsert: true }
-    );
-
-    // Additionally store OTP on the guest document if it exists (so verify-otp can read it)
-    try {
-      const client = await clientPromise;
-      const db = client.db("hotelDB");
-      const guests = db.collection("guests");
-      await guests.updateOne(
+    if (canUseDb && otpCol) {
+      await otpCol.updateOne(
         { email },
-        {
-          $set: {
-            otp: Number(otp),
-            otpExpires: new Date(Date.now() + 5 * 60 * 1000),
-            otpAttempts: 0,
-          },
-        }
+        { $set: { email, otp, createdAt: now, expiresAt } },
+        { upsert: true }
       );
-    } catch (e) {
-      console.warn("Optional guest otp fields update failed (non-fatal):", e);
+    }
+
+    // Ensure we have a guest record; store OTP there too so verify-otp can read/clear it
+    if (canUseDb) {
+      try {
+        const client = await clientPromise;
+        const db = client.db("hotelDB");
+        const guests = db.collection("guests");
+        await guests.updateOne(
+          { email },
+          {
+            $setOnInsert: {
+              email,
+              name: name || "",
+              phone: "",
+              roomNo: "",
+              isVerified: false,
+              createdAt: new Date(),
+            },
+            $set: {
+              otp: Number(otp),
+              otpExpires: new Date(Date.now() + 5 * 60 * 1000),
+              otpAttempts: 0,
+            },
+          },
+          { upsert: true }
+        );
+      } catch (e) {
+        console.warn("Optional guest otp fields update failed (non-fatal):", e);
+      }
     }
 
     // If mail credentials are missing, return success with dev fallback
@@ -146,8 +170,9 @@ export async function POST(req) {
 
   } catch (error) {
     console.error("Send OTP error:", error);
+    const message = error instanceof Error ? error.message : "Failed to send OTP";
     return NextResponse.json(
-      { success: false, error: "Failed to send OTP. Please try again." },
+      { success: false, error: message },
       { status: 500 }
     );
   }

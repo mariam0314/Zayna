@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import bcrypt from "bcryptjs";
+
+export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
@@ -77,11 +80,25 @@ export async function POST(req) {
       );
     }
 
-    // OTP is correct - verify the user
+    // Ensure guestId and password exist
+    let ensuredGuestId = user.guestId;
+    let ensuredPassword = user.password;
+    let plainPassword;
+    if (!ensuredGuestId) {
+      ensuredGuestId = `GUEST${user.roomNo || "101"}_${Date.now().toString().slice(-4)}`;
+    }
+    if (!ensuredPassword) {
+      plainPassword = Math.random().toString(36).slice(-8);
+      ensuredPassword = await bcrypt.hash(plainPassword, 10);
+    }
+
+    // OTP is correct - verify the user and save credentials
     await guests.updateOne(
       { email },
       { 
         $set: { 
+          guestId: ensuredGuestId,
+          password: ensuredPassword,
           isVerified: true,
           verifiedAt: new Date()
         },
@@ -99,11 +116,12 @@ export async function POST(req) {
       success: true,
       message: "Account verified successfully!",
       data: {
-        guestId: user.guestId,
+        guestId: ensuredGuestId,
         name: user.name,
         email: user.email,
         roomNo: user.roomNo,
-        isVerified: true
+        isVerified: true,
+        password: plainPassword || undefined
       }
     });
 
