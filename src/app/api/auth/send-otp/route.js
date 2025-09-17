@@ -56,6 +56,25 @@ export async function POST(req) {
       { upsert: true }
     );
 
+    // Additionally store OTP on the guest document if it exists (so verify-otp can read it)
+    try {
+      const client = await clientPromise;
+      const db = client.db("hotelDB");
+      const guests = db.collection("guests");
+      await guests.updateOne(
+        { email },
+        {
+          $set: {
+            otp: Number(otp),
+            otpExpires: new Date(Date.now() + 5 * 60 * 1000),
+            otpAttempts: 0,
+          },
+        }
+      );
+    } catch (e) {
+      console.warn("Optional guest otp fields update failed (non-fatal):", e);
+    }
+
     // If mail credentials are missing, return success with dev fallback
     const canSendEmail = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
     let transporter = null;

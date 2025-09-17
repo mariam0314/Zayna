@@ -84,28 +84,34 @@ export async function POST(req) {
     });
 
     // Setup nodemailer with Gmail App Password
-    const transporter = nodemailer.createTransporter({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+    const canSendEmail = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+    const transporter = canSendEmail
+      ? nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD,
+          },
+        })
+      : null;
 
-    // Send OTP email
-    await transporter.sendMail({
-      from: `"Hotel App" <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: "Your OTP for Registration",
-      html: `
-        <h2>Welcome ${name}!</h2>
-        <p>Your OTP for registration is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 5 minutes.</p>
-        <p>Thanks,<br>Hotel Team</p>
-      `,
-    });
-
-    console.log("📩 OTP sent to:", email);
+    if (transporter) {
+      // Send OTP email
+      await transporter.sendMail({
+        from: `"Hotel App" <${process.env.GMAIL_USER}>`,
+        to: email,
+        subject: "Your OTP for Registration",
+        html: `
+          <h2>Welcome ${name}!</h2>
+          <p>Your OTP for registration is: <strong>${otp}</strong></p>
+          <p>This OTP will expire in 5 minutes.</p>
+          <p>Thanks,<br>Hotel Team</p>
+        `,
+      });
+      console.log("📩 OTP sent to:", email);
+    } else {
+      console.warn("GMAIL creds missing; using dev fallback. OTP:", otp, "for", email);
+    }
 
     return NextResponse.json({
       success: true,
