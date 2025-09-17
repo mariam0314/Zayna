@@ -4,16 +4,17 @@ import { authOptions } from "@/lib/auth";
 
 const NEXTAUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_NEXTAUTH !== "false";
 
-if (NEXTAUTH_ENABLED) {
-  const handler = NextAuth(authOptions);
-  export { handler as GET, handler as POST };
-} else {
-  export async function GET() {
-    return NextResponse.json({
-      authenticated: false,
-      nextAuthDisabled: true,
-    });
-  }
+// Create NextAuth handler
+const nextAuthHandler = NextAuth(authOptions);
 
-  export const POST = GET;
+// Fallback handler for when NextAuth is disabled
+async function fallbackHandler() {
+  return NextResponse.json({
+    authenticated: false,
+    nextAuthDisabled: true,
+  });
 }
+
+// Export handlers based on configuration
+export const GET = NEXTAUTH_ENABLED ? nextAuthHandler : fallbackHandler;
+export const POST = NEXTAUTH_ENABLED ? nextAuthHandler : fallbackHandler;
