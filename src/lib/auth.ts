@@ -5,7 +5,8 @@ import bcrypt from "bcryptjs";
 import clientPromise from "./mongodb";
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
+  ...(process.env.MONGODB_URI ? { adapter: MongoDBAdapter(clientPromise) } : {}),
+  secret: process.env.NEXTAUTH_SECRET || "insecure-dev-secret",
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -19,6 +20,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          if (!process.env.MONGODB_URI) {
+            return null;
+          }
           const client = await clientPromise;
           const users = client.db().collection("users");
           

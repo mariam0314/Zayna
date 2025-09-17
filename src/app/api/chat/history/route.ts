@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
+import type { UpdateFilter } from "mongodb";
 
 interface ChatEntry {
   message: string;
@@ -63,19 +64,21 @@ export async function POST(req: Request) {
 
     // If we have 50+ messages, remove the oldest
     if (currentMessages.length >= 50) {
+      const popUpdate: UpdateFilter<ChatHistory> = { $pop: { messages: -1 } };
       await chatHistory.updateOne(
         { userId: session.user.id },
-        { $pop: { messages: -1 } }
+        popUpdate
       );
     }
 
     // Add new message
+    const pushUpdate: UpdateFilter<ChatHistory> = {
+      $push: { messages: chatEntry },
+      $set: { updatedAt: new Date() },
+    };
     await chatHistory.updateOne(
       { userId: session.user.id },
-      {
-        $push: { messages: chatEntry },
-        $set: { updatedAt: new Date() },
-      },
+      pushUpdate,
       { upsert: true }
     );
 
