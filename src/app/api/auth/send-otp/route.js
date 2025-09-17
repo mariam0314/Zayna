@@ -153,4 +153,9 @@ export async function POST(req) {
   }
 }
 
+// Optional GET for quick health check of the route
+export async function GET() {
+  return NextResponse.json({ ok: true, route: "auth/send-otp", method: "GET" });
+}
+
 // No in-memory store export anymore; OTPs are persisted in MongoDB
