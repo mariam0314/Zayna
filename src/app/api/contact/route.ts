@@ -16,10 +16,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, message: "Guest registered!" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ API error:", error);
+    const message = error instanceof Error ? error.message : "Server error";
     return NextResponse.json(
-      { success: false, error: error.message || "Server error" },
+      { success: false, error: message },
       { status: 500 }
     );
   }

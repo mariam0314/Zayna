@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Reference: blueprint:javascript_gemini integration
 // the newest Gemini model series is "gemini-2.5-flash" or gemini-2.5-pro"
@@ -12,7 +12,7 @@ if (!process.env.GEMINI_API_KEY) {
 
 // const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const HOTEL_CONTEXT = `
+// const HOTEL_CONTEXT = `
 You are Zayna Hotel's AI Assistant. You're a luxury hotel concierge with deep knowledge about Zayna Hotel services, amenities, and the local area. Always maintain a professional, warm, and helpful tone.
 
 ZAYNA HOTEL INFORMATION:
@@ -56,7 +56,7 @@ NEW FEATURES:
 - Dining Orders: Order food with delivery to your room, prices in AED
 
 Always provide specific, helpful information. If asked about booking, pricing, or availability, direct guests to call (555) 123-4567 or visit our website. For spa bookings, mention ext. 205. For meeting rooms, mention ext. 150.
-`;
+// `;
 
 export async function POST(req: Request) {
   try {

@@ -28,7 +28,7 @@ export default function ContactSection() {
       } else {
         setStatus("Error: " + data.error);
       }
-    } catch (err) {
+    } catch {
       setStatus("Error sending message.");
     }
   };
