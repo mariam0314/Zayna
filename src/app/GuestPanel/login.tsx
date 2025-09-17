@@ -176,8 +176,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
           setPassword(regPassword);
           // Optionally auto-sign-in after short delay
           setTimeout(() => {
-            const evt = new Event("submit", { bubbles: true, cancelable: true });
-            // Call handleLogin directly to avoid DOM coupling
+            // Call handleLogin directly (no unused local vars)
             handleLogin({ preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.FormEvent);
           }, 1200);
         } else {

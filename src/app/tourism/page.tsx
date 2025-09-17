@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useGuestSession } from "@/hooks/useGuestSession";
 import { useRouter } from "next/navigation";
-import { MapPin, Eye, Star, Clock, Camera } from "lucide-react";
+import { MapPin, Eye, Star, Clock } from "lucide-react";
 
 const touristAttractions = [
   {

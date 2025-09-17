@@ -1,5 +1,6 @@
 // Footer.jsx
 "use client";
+import Link from "next/link";
 import { Instagram, Facebook } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -10,16 +11,16 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
         {/* Links */}
         <div className="flex gap-6">
-          <a href="/" className="hover:text-gold transition-colors">Home</a>
-          <a href="/about" className="hover:text-gold transition-colors">About</a>
+          <Link href="/" className="hover:text-gold transition-colors">Home</Link>
+          <Link href="/about" className="hover:text-gold transition-colors">About</Link>
           {session && (
             <>
-              <a href="/tourism" className="hover:text-gold transition-colors">Tourism</a>
-              <a href="/spa" className="hover:text-gold transition-colors">Spa</a>
-              <a href="/dining" className="hover:text-gold transition-colors">Dining</a>
+              <Link href="/tourism" className="hover:text-gold transition-colors">Tourism</Link>
+              <Link href="/spa" className="hover:text-gold transition-colors">Spa</Link>
+              <Link href="/dining" className="hover:text-gold transition-colors">Dining</Link>
             </>
           )}
-          <a href="/contact" className="hover:text-gold transition-colors">Contact</a>
+          <Link href="/contact" className="hover:text-gold transition-colors">Contact</Link>
         </div>
 
         {/* Social Media */}

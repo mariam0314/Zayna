@@ -10,7 +10,7 @@ if (!process.env.GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not configured");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const HOTEL_CONTEXT = `
 You are Zayna Hotel's AI Assistant. You're a luxury hotel concierge with deep knowledge about Zayna Hotel services, amenities, and the local area. Always maintain a professional, warm, and helpful tone.

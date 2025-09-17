@@ -5,7 +5,7 @@ import { useGuestSession } from "@/hooks/useGuestSession";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 export default function Page() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const { guest, checked } = useGuestSession();
   const router = useRouter();
 

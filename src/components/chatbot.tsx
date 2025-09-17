@@ -174,8 +174,8 @@ export default function ChatBot() {
                 >
                   {msg.content}
                   {msg.timestamp && (
-                    <div className={`text-xs mt-1 ${msg.role === "user" ? "text-black/70" : "text-foreground/60"}`}>
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className={`text-xs mt-1 ${msg.role === "user" ? "text-black/70" : "text-foreground/60"}`}>
+                      {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   )}
                 </div>
