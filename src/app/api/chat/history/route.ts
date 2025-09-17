@@ -3,6 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
+interface ChatEntry {
+  message: string;
+  reply: string;
+  timestamp: Date;
+}
+
+interface ChatHistory {
+  userId: string;
+  messages: ChatEntry[];
+  updatedAt: Date;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -12,13 +24,11 @@ export async function GET() {
 
     const client = await clientPromise;
     const db = client.db();
-    const chatHistory = db.collection("chat_history");
+    const chatHistory = db.collection<ChatHistory>("chat_history");
 
-    const history = await chatHistory
-      .findOne({ userId: session.user.id })
-      ?.then((doc) => doc?.messages || []);
+    const history = await chatHistory.findOne({ userId: session.user.id });
 
-    return NextResponse.json({ messages: history || [] });
+    return NextResponse.json({ messages: history?.messages || [] });
   } catch (error) {
     console.error("Chat history error:", error);
     return NextResponse.json({ messages: [] });
@@ -39,9 +49,9 @@ export async function POST(req: Request) {
 
     const client = await clientPromise;
     const db = client.db();
-    const chatHistory = db.collection("chat_history");
+    const chatHistory = db.collection<ChatHistory>("chat_history");
 
-    const chatEntry = {
+    const chatEntry: ChatEntry = {
       message,
       reply,
       timestamp: new Date(),
@@ -59,11 +69,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Add new message (quick TypeScript fix: cast $push as any)
+    // Add new message
     await chatHistory.updateOne(
       { userId: session.user.id },
       {
-        $push: { messages: chatEntry } as any,
+        $push: { messages: chatEntry },
         $set: { updatedAt: new Date() },
       },
       { upsert: true }
