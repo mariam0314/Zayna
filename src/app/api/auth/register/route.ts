@@ -90,37 +90,41 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     });
 
-    // ✅ Setup Nodemailer with Gmail App Password
-    const canSendEmail = !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
-    if (canSendEmail) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-        },
-      });
+    // ✅ Send OTP Email (or fallback to console)
+    try {
+      if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_APP_PASSWORD,
+          },
+        });
 
-      await transporter.sendMail({
-        from: `"Hotel App" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: "Your OTP for Registration",
-        html: `
-          <h2>Welcome ${name}!</h2>
-          <p>Your OTP is: <strong>${otp}</strong></p>
-          <p>This OTP will expire in 5 minutes.</p>
-          <p>Thanks,<br/>Hotel Team</p>
-        `,
-      });
+        await transporter.sendMail({
+          from: `"Hotel App" <${process.env.GMAIL_USER}>`,
+          to: email,
+          subject: "Your OTP for Registration",
+          html: `
+            <h2>Welcome ${name}!</h2>
+            <p>Your OTP is: <strong>${otp}</strong></p>
+            <p>This OTP will expire in 5 minutes.</p>
+            <p>Thanks,<br/>Hotel Team</p>
+          `,
+        });
 
-      console.log("📩 OTP sent to:", email);
-    } else {
-      console.warn("⚠️ GMAIL credentials missing. OTP:", otp, "for", email);
+        console.log("📩 OTP sent to:", email);
+      } else {
+        console.warn("⚠️ Missing Gmail credentials. OTP:", otp, "for", email);
+      }
+    } catch (mailErr) {
+      console.error("📧 Email sending failed, falling back to console log.");
+      console.log("⚠️ OTP:", otp, "for", email);
     }
 
     return NextResponse.json({
       success: true,
-      message: "Registration successful, OTP sent to email",
+      message: "Registration successful, OTP sent (or logged in console)",
       data: { guestId, name, email, phone, roomNo },
     });
 
